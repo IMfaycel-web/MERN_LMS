@@ -1,0 +1,94 @@
+import { useEffect, useState } from "react";
+import Loading from "../../components/students/Loading";
+import { useAppConfig } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
+import { toast } from "react-toastify";
+import EmptySection from "../../components/common/EmptySection";
+import { assets } from "../../assets/assets";
+
+function StudentsEnrolled() {
+  const [enrolledStudents, setEnrolledStudents] = useState(null);
+  const { backendUrl } = useAppConfig();
+  const { getToken, isEducator } = useAuth();
+
+  const fetchEnrolledStudents = async () => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.get(
+        `${backendUrl}/api/educator/enrolled-students`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (data.status === "success") {
+        setEnrolledStudents(data.data.enrolledStudents.reverse());
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!isEducator) return;
+    fetchEnrolledStudents();
+  }, [isEducator]);
+  return enrolledStudents ? (
+    <div className="min-h-screen flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0">
+      <div className="flex flex-col items-center max-w-4xl w-full overflow-hidden rounded-md bgèwhite border border-gray-500/20">
+        <table className="table-fixed md:table-auto w-full overflow-hidden pb-4">
+          <thead className="text-gray-900 border-b border-gray-500/20 text-sm text-left">
+            <tr>
+              <th className="px-4 py-3 font-semibold text-center hidden sm:table-cell">
+                #
+              </th>
+              <th className="px-4 py-3 font-semibold">Student Name</th>
+              <th className="px-4 py-3 font-semibold">Course Title</th>
+              <th className="px-4 py-3 font-semibold hidden sm:table-cell">
+                Date
+              </th>
+            </tr>
+          </thead>
+          <tbody className="text-sm text-gray-500">
+            {enrolledStudents.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="p-0">
+                  <EmptySection
+                    imageSrc={assets.student}
+                    title="No Students Enrolled Yet"
+                    description="No students have enrolled in your courses yet. Keep creating quality content and they will come!"
+                    size="md"
+                  />
+                </td>
+              </tr>
+            ) : (
+              enrolledStudents.map((item, index) => (
+                <tr key={index} className="border-b border-gray-500/20">
+                  <td className="px-4 py-3 text-center hidden sm:table-cell">
+                    {index + 1}
+                  </td>
+                  <td className="md:px-4 px-2 py-3 flex items-center space-x-3">
+                    <img
+                      src={item.student.imageUrl}
+                      alt="Student image"
+                      className="w-8 h-9 rounded-full"
+                    />
+                    <span className="truncate">{item.student.name}</span>
+                  </td>
+                  <td className="px-4 py-3 truncate">{item.courseTitle}</td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    {new Date(item.purchaseDate).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ) : (
+    <Loading />
+  );
+}
+
+export default StudentsEnrolled;
